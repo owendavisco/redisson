@@ -12,6 +12,9 @@ import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.google.inject.AbstractModule;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -582,6 +585,26 @@ public class RedissonExecutorServiceTest extends BaseTest {
         redisson.getExecutorService("test").delete();
         redisson.getKeys().delete("runnableCounter", "counter");
         assertThat(redisson.getKeys().count()).isZero();
+    }
+
+    @Test
+    public void testTaskInjection() throws InterruptedException, ExecutionException {
+        RExecutorService executor = redisson.getExecutorService("testI");
+        CompletableFuture<Boolean> onCalled = new CompletableFuture<>();
+        Injector injector = Guice.createInjector(new AbstractModule() {
+            @Override
+            public void configure() {
+                bind(TestInjectable.class).toInstance(() -> onCalled.complete(true));
+            }
+        });
+        executor.registerWorkers(WorkerOptions.defaults().injector(injector));
+
+        RExecutorFuture<?> future = executor.submit(new InjectedRunnableTask());
+
+        future.get();
+        assertThat(onCalled.get()).isEqualTo(true);
+
+        executor.shutdown();
     }
     
     @Test

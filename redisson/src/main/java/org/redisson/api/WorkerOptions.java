@@ -20,8 +20,10 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import com.google.inject.Injector;
 import org.redisson.api.executor.TaskListener;
 import org.redisson.config.Config;
+import org.redisson.executor.GuiceTasksInjector;
 import org.redisson.executor.SpringTasksInjector;
 import org.redisson.executor.TasksInjector;
 import org.springframework.beans.factory.BeanFactory;
@@ -71,6 +73,8 @@ public final class WorkerOptions {
     /**
      * Defines Spring BeanFactory instance to execute tasks with Spring's '@Autowired', 
      * '@Value' or JSR-330's '@Inject' annotation.
+     *
+     * The Spring BeanFactory and Guice Injector are mutually exclusive
      * 
      * @param beanFactory - Spring BeanFactory instance
      * @return self instance
@@ -79,6 +83,22 @@ public final class WorkerOptions {
         this.beanFactory = beanFactory;
         if (beanFactory != null) {
             this.tasksInjector = new SpringTasksInjector(beanFactory);
+        }
+        return this;
+    }
+
+    /**
+     * Defines Guice Injector instance to execute tasks with either Guice's '@Inject',
+     * or JSR-330's '@Inject' annotation.
+     *
+     * The Guice Injector and Spring BeanFactory are mutually exclusive
+     *
+     * @param injector - Guice injector instance
+     * @return self instance
+     */
+    public WorkerOptions injector(Injector injector) {
+        if (injector != null) {
+            this.tasksInjector = new GuiceTasksInjector(injector);
         }
         return this;
     }
